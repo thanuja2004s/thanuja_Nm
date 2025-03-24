@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Handwritten Digit Recognition</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        #canvas {
+            border: 1px solid black;
+            cursor: crosshair;
+        }
+        #controls {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Handwritten Digit Recognition Web App</h1>
+    <canvas id="canvas" width="280" height="280"></canvas>
+    <div id="controls">
+        <button onclick="clearCanvas()">Clear</button>
+        <button onclick="predictDigit()">Predict</button>
+    </div>
+    <h2>Prediction: <span id="result">?</span></h2>
+
+    <script>
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        canvas.addEventListener('mousedown', () => isDrawing = true);
+        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mousemove', draw);
+
+        function draw(e) {
+            if (!isDrawing) return;
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(e.offsetX, e.offsetY, 10, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('result').innerText = '?';
+        }
+
+        async function predictDigit() {
+            let imgData = canvas.toDataURL();
+            let img = new Image();
+            img.src = imgData;
+            img.onload = async () => {
+                let tensor = tf.browser.fromPixels(img, 1)
+                    .resizeNearestNeighbor([28, 28])
+                    .mean(2)
+                    .toFloat()
+                    .div(255.0)
+                    .expandDims(0);
+
+                const model = await tf.loadLayersModel('model/model.json');
+                let prediction = model.predict(tensor);
+                let digit = prediction.argMax(1).dataSync()[0];
+                document.getElementById('result').innerText = digit;
+            };
+        }
+    </script>
+</body>
+</html>
